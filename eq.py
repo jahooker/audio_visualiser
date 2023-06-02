@@ -101,6 +101,8 @@ SAMPLESIZE_t = 4096
 SAMPLESIZE_f = 128
 
 f, t, Z = sp.signal.stft(y, sr, nperseg=SAMPLESIZE_f)
+print(f)
+# print(t)
 print(f'{Z.shape = }')
 # plt.pcolormesh(t, f, np.log(np.abs(Z)), shading='gouraud')
 
@@ -116,6 +118,7 @@ elif time_domain:
 elif freq_domain:
     fig, axf = plt.subplots(1, 1, figsize=(6, 6))
 
+num_waves = 64
 
 if time_domain:
     axt.set_xlim(0, SAMPLESIZE_t)
@@ -129,6 +132,10 @@ if freq_domain:
     bars = axf.bar(f / 1000, np.zeros(len(f)), 
                    bottom=-16, width=1.5 * f.max() / 1000 / SAMPLESIZE_f, 
                    snap=False, color=colors, edgecolor='none')
+if time_domain and freq_domain:
+    empties = ([] for i in range(2 * num_waves))
+    # waves = axt.plot(*empties, lw=2)
+    waves = axt.plot([], [], lw=2)
 
 
 # t = np.arange(SAMPLESIZE)
@@ -204,6 +211,33 @@ def animate_comp(elapsed):
         return (*bars, title)
 
     return (*bars, title)
+
+def animate_waves(elapsed):
+    delay = int(400 * 128 / SAMPLESIZE_f)
+    i = round(Z.shape[1] * elapsed / (n / sr))
+    i -= delay
+    if i < 0:
+        return waves
+    elif i >= Z.shape[1]:
+        plt.close(fig)
+        return waves
+
+    ws = Z[1:65, i]  # Ignore the DC component
+    x = np.arange(SAMPLESIZE_t)
+    b = np.zeros(SAMPLESIZE_t)
+    for j, w in enumerate(ws):
+        A = np.abs(w)
+        phi = 0
+        phi = np.angle(w)
+        freq = f[j + 1]
+        b += A * np.cos((x * 2 * np.pi * freq / sr + phi) / 32)
+    waves[0].set_data(x, b)
+
+    if i >= Z.shape[1] - 1:
+        plt.close(fig)
+        return waves
+
+    return waves
 
 # print(f'Animation will have {Z.shape[1]} frames.')
 print(f'At a sr of {sr}/s, {SAMPLESIZE_t} samples lasts {SAMPLESIZE_t/sr * 1000} ms')
